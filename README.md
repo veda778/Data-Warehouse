@@ -1,5 +1,4 @@
-# Data-warehouse-Project
-# Retail Sales Data Warehouse & Analytics Platform
+# 🏬 Retail Sales Data Warehouse & Analytics Platform
 
 ![MySQL](https://img.shields.io/badge/MySQL-00758F?style=flat&logo=mysql&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
@@ -7,25 +6,37 @@
 ![Power BI](https://img.shields.io/badge/Power%20BI-F2C811?style=flat&logo=powerbi&logoColor=black)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-An end-to-end data platform that takes raw CRM and ERP exports through a medallion-architecture warehouse in MySQL, automates the pipeline with Python, layers a Random Forest churn model on top of the customer data, and surfaces everything in a four-page Power BI report with row-level security.
+> A complete data platform, start to finish. Raw CRM and ERP exports flow through a medallion-style MySQL warehouse. Python automates the whole pipeline. A Random Forest model predicts customer churn from the warehouse data. Everything is presented in a four-page Power BI report secured with row-level security.
 
-## Table of Contents
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Key Components](#key-components)
-- [Tech Stack](#tech-stack)
-- [Data Sources](#data-sources)
-- [Repository Structure](#repository-structure)
-- [How to Run](#how-to-run)
-- [Results](#results)
+---
 
-## Overview
+## 📑 Contents
 
-Raw sales, customer, and product data arrives from two disconnected source systems — a CRM and an ERP — in inconsistent formats (mismatched date formats, duplicate customer records, inconsistent product categories). This project builds a warehouse that cleans, conforms, and models that data into a single star schema, then extends it two ways: an ML layer that flags customers likely to churn, and a BI layer that makes the whole thing usable by a non-technical business audience.
+- [Project Summary](#-project-summary)
+- [Architecture](#-architecture)
+- [Core Components](#-core-components)
+- [Technologies Used](#-technologies-used)
+- [Source Data](#-source-data)
+- [Folder Layout](#-folder-layout)
+- [Getting Started](#-getting-started)
+- [Outcomes](#-outcomes)
 
-## Architecture
+---
 
-The warehouse follows the **medallion architecture** pattern — Bronze, Silver, Gold — with each layer implemented as its own MySQL database.
+## 🔎 Project Summary
+
+The business data comes from two separate systems, a **CRM** and an **ERP**. The two do not agree with each other: dates are written in different formats, the same customer appears more than once, and product categories are labelled inconsistently.
+
+This project fixes that. It cleans and aligns the data, then models it into one **star schema**. On top of that foundation, it adds two more layers:
+
+- 🤖 **Machine learning layer:** finds customers who are likely to churn.
+- 📊 **BI layer:** gives non-technical business users an easy way to explore the data.
+
+---
+
+## 🏗 Architecture
+
+The warehouse is built on the **medallion architecture** (Bronze → Silver → Gold). Every layer lives in its own MySQL database.
 
 ```mermaid
 flowchart LR
@@ -34,23 +45,23 @@ flowchart LR
         A2["ERP: CUST_AZ12, LOC_A101, PX_CAT_G1V2"]
     end
 
-    subgraph Bronze["Bronze — raw ingestion"]
+    subgraph Bronze["Bronze: raw ingestion"]
         B["Raw tables, loaded as-is"]
     end
 
-    subgraph Silver["Silver — cleaned & conformed"]
+    subgraph Silver["Silver: cleaned & conformed"]
         S["Deduplicated, standardized, business rules applied"]
     end
 
-    subgraph Gold["Gold — star schema (views)"]
+    subgraph Gold["Gold: star schema (views)"]
         G1["dim_customers"]
         G2["dim_products"]
         G3["fact_sales"]
     end
 
     P["Python ETL Automation Layer"]
-    M["Random Forest Churn Model\nROC-AUC ~0.974"]
-    R["Power BI Report\n4 pages · DAX · Row-Level Security"]
+    M["Random Forest Churn Model<br/>ROC-AUC ~0.974"]
+    R["Power BI Report<br/>4 pages · DAX · Row-Level Security"]
 
     A1 --> B
     A2 --> B
@@ -69,68 +80,99 @@ flowchart LR
     M --> R
 ```
 
-- **Bronze:** raw CRM/ERP data loaded with no transformation, preserving source fidelity.
-- **Silver:** deduplication via `ROW_NUMBER()`, date normalization with `STR_TO_DATE()`, standardized keys and categories, all handled through stored procedures.
-- **Gold:** business-ready views (`dim_customers`, `dim_products`, `fact_sales`, plus reporting views `report_customers` / `report_products`) built on a star schema, with surrogate keys generated via `ROW_NUMBER()`.
+### What each layer does
 
-## Key Components
+| Layer | Role |
+| ----- | ---- |
+| 🥉 **Bronze** | Holds the raw CRM/ERP data exactly as received, with no changes, so nothing from the source is lost. |
+| 🥈 **Silver** | Removes duplicates using `ROW_NUMBER()`, converts dates using `STR_TO_DATE()`, and standardizes keys and categories. All of this runs inside stored procedures. |
+| 🥇 **Gold** | Business-ready views on a star schema: `dim_customers`, `dim_products`, and `fact_sales`, plus the reporting views `report_customers` and `report_products`. Surrogate keys are created with `ROW_NUMBER()`. |
 
-**1. SQL Data Warehouse (MySQL)**
-Bronze/Silver/Gold layers as separate databases, star schema in Gold, ETL between layers handled by stored procedures.
+---
 
-**2. Python ETL Automation**
-`run_pipeline.py` orchestrates the Bronze → Silver → Gold pipeline end-to-end using **SQLAlchemy** and **mysql-connector-python**, invoking the MySQL stored procedures via `callproc()`. Credentials are loaded securely from environment variables (`.env`, not committed) rather than hardcoded.
+## 🧩 Core Components
 
-**3. Churn Prediction Model**
-A **Random Forest classifier** (`churn_model.py`) trained on customer data from the Gold layer. A customer is labeled **churned if they have made no purchase in the last 90 days**. The model uses **RFM (Recency, Frequency, Monetary) features** and achieves **~0.974 ROC-AUC**. Predictions are written back to `gold.customer_churn_scores` for use in the Power BI report.
+### 1️⃣ SQL Data Warehouse (MySQL)
+Bronze, Silver, and Gold each sit in a separate database. The Gold layer uses a star schema. Data moves from one layer to the next through stored procedures.
 
-**4. Power BI Report**
-A four-page report built on the Gold-layer views, with 13 custom DAX measures, row-level security, a custom navy/teal theme, and a dedicated DateTable for time intelligence:
-- **Executive Summary**
-- **Customer & Churn Risk**
-- **Product Performance**
-- **RFM Segmentation**
-## Tech Stack
-- **Database:** MySQL, MySQL Workbench
-- **ETL:** SQL stored procedures, Python *(fill in specific libraries)*
-- **Machine Learning:** Python, scikit-learn (Random Forest)
-- **BI / Reporting:** Power BI, DAX, Row-Level Security
+### 2️⃣ Python ETL Automation
+`run_pipeline.py` runs the full Bronze → Silver → Gold flow from end to end. It uses **SQLAlchemy** and **mysql-connector-python** and triggers the MySQL stored procedures with `callproc()`. Database credentials come from environment variables (a `.env` file that is never committed), so nothing sensitive is hardcoded.
 
-## Data Sources
+### 3️⃣ Churn Prediction Model
+A **Random Forest classifier** (`churn_model.py`) is trained on customer data from the Gold layer.
+
+- **Churn definition:** a customer counts as churned if they have not bought anything in the last 90 days.
+- **Features:** RFM (Recency, Frequency, Monetary).
+- **Performance:** about **0.974 ROC-AUC**.
+- **Output:** predictions are saved to `gold.customer_churn_scores`, which the Power BI report reads.
+
+### 4️⃣ Power BI Report
+The report has four pages and is built on the Gold-layer views. It includes 13 custom DAX measures, row-level security, a custom navy and teal theme, and a dedicated DateTable for time intelligence.
+
+- 📌 **Executive Summary**
+- 📌 **Customer & Churn Risk**
+- 📌 **Product Performance**
+- 📌 **RFM Segmentation**
+
+---
+
+## 🛠 Technologies Used
+
+| Area | Tools |
+| ---- | ----- |
+| 🗄 **Database** | MySQL, MySQL Workbench |
+| 🔄 **ETL** | SQL stored procedures, Python (SQLAlchemy, mysql-connector-python) |
+| 🧠 **Machine Learning** | Python, scikit-learn (Random Forest) |
+| 📈 **BI & Reporting** | Power BI, DAX, Row-Level Security |
+
+---
+
+## 📂 Source Data
+
 | System | Files |
-|---|---|
-| CRM | `cust_info.csv`, `prd_info.csv`, `sales_details.csv` |
-| ERP | `CUST_AZ12.csv`, `LOC_A101.csv`, `PX_CAT_G1V2.csv` |
+| ------ | ----- |
+| **CRM** | `cust_info.csv`, `prd_info.csv`, `sales_details.csv` |
+| **ERP** | `CUST_AZ12.csv`, `LOC_A101.csv`, `PX_CAT_G1V2.csv` |
 
-## Repository Structure
+---
+
+## 🗂 Folder Layout
+
 ```
 Data-warehouse-Project/
-├── datasets/       # Raw source CSVs (CRM + ERP)
-├── docs/           # Architecture notes, data catalog, naming conventions
+├── datasets/       # Source CSV files (CRM + ERP)
+├── docs/           # Architecture notes, data catalog, naming rules
 ├── scripts/
 │   ├── database creation/
-│   ├── Bronze/     # Raw ingestion scripts
+│   ├── Bronze/     # Scripts for raw data loading
 │   ├── silver/     # Cleaning & transformation procedures
 │   └── Gold/       # Star schema view definitions
-├── etl/            # Python ETL automation
+├── etl/            # Python automation for the pipeline
 ├── ml/             # Churn prediction notebook + model
 ├── power-bi/       # .pbix file + report screenshots
 ├── tests/          # Data quality checks
 └── README.md
 ```
 
-## How to Run
-1. Create the Bronze, Silver, and Gold databases in MySQL Workbench using the scripts in `scripts/database creation/`.
-2. Run the Bronze ingestion scripts to load raw CSVs from `datasets/`.
-3. Run the Silver transformation procedures to clean and conform the data.
-4. Run the Gold layer scripts to build the star-schema views.
-5. *(fill in: how to run the Python ETL script — command/entry point)*
-6. Open `power-bi/*.pbix` in Power BI Desktop and refresh against the Gold layer to explore the report.
+---
 
-## Results
-- Deduplicated and standardized data across two disconnected source systems into a single conformed star schema.
-- Churn model reaches **~0.974 ROC-AUC** on held-out data.
-- Power BI report delivers role-based, secured access to sales, customer, and product insights across 4 pages.
+## 🚀 Getting Started
+
+1. **Create the databases.** In MySQL Workbench, run the scripts in `scripts/database creation/` to set up the Bronze, Silver, and Gold databases.
+2. **Load the raw data.** Run the Bronze scripts to import the CSV files from `datasets/`.
+3. **Clean the data.** Run the Silver procedures to clean and standardize everything.
+4. **Build the star schema.** Run the Gold scripts to create the views.
+5. **Run the Python pipeline.** *(fill in: the command or entry point for the Python ETL script)*
+6. **Explore the report.** Open `power-bi/*.pbix` in Power BI Desktop and refresh it against the Gold layer.
 
 ---
-*Adapted and extended from a SQL Server-based warehouse course, rebuilt for MySQL with additional Python automation, ML, and BI layers.*
+
+## ✅ Outcomes
+
+- Two disconnected source systems were cleaned, deduplicated, and merged into one star schema.
+- The churn model reaches about **0.974 ROC-AUC** on held-out data.
+- The Power BI report offers secure, role-based access to sales, customer, and product insights across 4 pages.
+
+---
+
+*This project is adapted from a SQL Server data warehouse course. It was rebuilt for MySQL and extended with Python automation, machine learning, and BI layers.*
